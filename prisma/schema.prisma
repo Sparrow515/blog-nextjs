@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 管理员
+model AdminUser {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(20)
+  password  String
+  name      String   @default("")
+  avatar    String   @default("")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp
+
+  @@map("admin_users")
+}
+
+// 用户表
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique @db.VarChar(30)
+  name      String
+  password  String
+  avatar    String   @default("")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime @map("updated_at") @db.Timestamp
+
+  Post    Post[]
+  Project Project[]
+
+  @@map("users")
+}
+
+// 文章
+model Post {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  title     String   @db.VarChar(100)
+  content   String   @db.LongText
+  summary   String   @default("")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamp
+
+  categories CategoriesOnPosts[]
+  tags       TagsOnPosts[]
+
+  @@map("posts")
+}
+
+// 文章标签
+model Tag {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
+
+  posts TagsOnPosts[]
+
+  @@map("tags")
+}
+
+// 文章和文章标签中间表 n-n
+model TagsOnPosts {
+  postId     Int      @map("post_id")
+  Post       Post     @relation(fields: [postId], references: [id])
+  tagId      Int      @map("tag_id")
+  Tag        Tag      @relation(fields: [tagId], references: [id])
+  assignedBy String   @default("") @map("assigned_by")
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamp
+
+  @@id([postId, tagId])
+  @@map("posts_tags")
+}
+
+model Category {
+  id       Int    @id @default(autoincrement())
+  parentId Int    @default(0) @map("parent_id")
+  name     String @unique
+
+  posts CategoriesOnPosts[]
+
+  @@map("categories")
+}
+
+model CategoriesOnPosts {
+  postId     Int      @map("post_id")
+  Post       Post     @relation(fields: [postId], references: [id])
+  categoryId Int      @map("category_id")
+  Category   Category @relation(fields: [categoryId], references: [id])
+  assignedBy String   @default("") @map("assigned_by")
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamp
+
+  @@id([postId, categoryId])
+  @@map("posts_categories")
+}
+
+// 项目
+model Project {
+  id           Int     @id @default(autoincrement())
+  userId       Int     @map("user_id")
+  user         User    @relation(fields: [userId], references: [id])
+  title        String  @unique
+  descriptions String?
+  repoUrl      String? @map("repo_url")
+  appUrl       String? @map("app_url")
+  order        Int?    @default(-1)
+
+  @@map("projects")
+}
